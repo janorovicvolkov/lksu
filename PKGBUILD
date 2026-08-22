@@ -39,6 +39,8 @@ package() {
     # usable immediately after install (root is permitted, everyone
     # else is denied until an admin adds them with lksu --add-user).
     install -Dm640 etc/lksu.d/config.lua "$pkgdir/etc/lksu.d/config.lua"
+    chmod 0440 "$pkgdir/etc/lksu.d"
+    chown root:root "$pkgdir/etc/lksu.d"
     chmod 0440 "$pkgdir/etc/lksu.d/config.lua"
     chown root:root "$pkgdir/etc/lksu.d/config.lua"
     # Permitted-users list (sqlite), seeded with root => ALL so lksu is
