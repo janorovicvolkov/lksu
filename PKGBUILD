@@ -39,6 +39,5 @@ package() {
     # usable immediately after install (root is permitted, everyone
     # else is denied until an admin edits user-lists.lua).
     install -Dm640 -o root -g root etc/lksu.d/config.lua "$pkgdir/etc/lksu.d/config.lua"
-    install -Dm640 -o root -g root etc/lksu.d/user-lists.lua "$pkgdir/etc/lksu.d/user-lists.lua"
     install -Dm640 -o root -g root log/lksu.log "$pkgdir/var/log/lksu.log"
 }
