@@ -17,3 +17,4 @@ chrono = "0.4"
 anyhow = "1.0"
 rpassword = "7.5.4"
 users = "0.11.0"
+rusqlite = { version = "0.40.2", features = ["bundled"] }

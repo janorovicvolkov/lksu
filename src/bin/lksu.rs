@@ -48,7 +48,7 @@ fn touch_auth_timestamp(user: &str) {
 
 // Ask for the root password up to "max_attempts" times, verifying each
 // one with PAM. Returns true if authentication succeeded.
-fn authenticate(user: &str, max_attempts: u32) -> bool {
+fn authenticate(user: &str, command: &str, max_attempts: u32, log_path: &str) -> bool {
     println!("");
     println!(
         "    {}",
@@ -71,7 +71,17 @@ fn authenticate(user: &str, max_attempts: u32) -> bool {
             }
         };
         match password::verify(user, &pass) {
-            Ok(true) => return true,
+            Ok(true) => {
+                log::record(
+                    &log_path,
+                    Entry {
+                        user: &user,
+                        command: &command,
+                        outcome: Outcome::Allowed,
+                    }
+                );
+                return true;
+            }
             Ok(false) => {
                 if attempt < max_attempts {
                     ui::warning(&format!(
@@ -94,6 +104,17 @@ fn authenticate(user: &str, max_attempts: u32) -> bool {
             max_attempts
         ));
     }
+    log::record(
+        &log_path,
+        Entry {
+            user: &user,
+            command: &command,
+            outcome: Outcome::DeniedBadPassword {
+                attempts: max_attempts,
+            },
+        },
+    );
+    ui::error("This incident has been logged!");
     false
 }
 
@@ -103,11 +124,20 @@ fn authenticate(user: &str, max_attempts: u32) -> bool {
 // --reset-pass already had. Without this, any user who can supply
 // their own password could grant themselves ALL permissions via
 // --add-user, which would defeat the whole permitted-list mechanism.
-fn require_root(user: &str) -> bool {
+fn require_root(user: &str, command: &str, log_path: &str) -> bool {
     if user == "root" {
         true
     } else {
-        ui::error("You are not permitted to run account-management commands!");
+        ui::error("You are not permitted to run account management commands!");
+        log::record(
+            &log_path,
+            Entry {
+                user: &user,
+                command: &command,
+                outcome: Outcome::DeniedNotPermitted,
+            },
+        );
+        ui::error("This incident has been logged!");
         false
     }
 }
@@ -132,6 +162,7 @@ fn main() {
         exit(0);
     }
     let config_path = env::var("LKSU_CONFIG").unwrap_or_else(|_| DEFAULT_CONFIG_PATH.to_string());
+    let full_command = args[1..].join(" ");
     let user_lists_path =
         env::var("LKSU_USER_LISTS").unwrap_or_else(|_| DEFAULT_USER_LISTS_PATH.to_string());
     let config = match Config::load(&config_path) {
@@ -150,7 +181,7 @@ fn main() {
     };
     let user = current_username();
     if args[1] == "--add-user" || args[1] == "-au" {
-        if !require_root(&user) {
+        if !require_root(&user, &full_command, &config.log_path) {
             exit(1);
         }
         let Some(target) = args.get(2) else {
@@ -159,7 +190,7 @@ fn main() {
         };
         let commands = &args[3..];
         let attempts_allowed = config.max_attempts.max(1);
-        if !authenticate(&user, attempts_allowed) {
+        if !authenticate(&user, &full_command, attempts_allowed, &config.log_path) {
             exit(1);
         }
         if let Err(e) = list::add_user(&user_lists_path, target, commands) {
@@ -174,6 +205,15 @@ fn main() {
         let target = match args.get(2) {
             Some(t) if t != &user && user != "root" => {
                 ui::error("You are not permitted to check another users permitted commands!");
+                log::record(
+                    &config.log_path,
+                    Entry {
+                        user: &user,
+                        command: &full_command,
+                        outcome: Outcome::DeniedNotPermitted,
+                    },
+                );
+                ui::error("This incident has been logged!");
                 exit(1);
             }
             Some(t) => t.clone(),
@@ -183,7 +223,7 @@ fn main() {
         exit(0);
     }
     if args[1] == "--delete" || args[1] == "-d" {
-        if !require_root(&user) {
+        if !require_root(&user, &full_command, &config.log_path) {
             exit(1);
         }
         let Some(target) = args.get(2) else {
@@ -191,7 +231,7 @@ fn main() {
             exit(1);
         };
         let attempts_allowed = config.max_attempts.max(1);
-        if !authenticate(&user, attempts_allowed) {
+        if !authenticate(&user, &full_command, attempts_allowed, &config.log_path) {
             exit(1);
         }
         if let Err(e) = account::delete_account(target) {
@@ -201,7 +241,7 @@ fn main() {
         exit(0);
     }
     if args[1] == "--edit-user" || args[1] == "-eu" {
-        if !require_root(&user) {
+        if !require_root(&user, &full_command, &config.log_path) {
             exit(1);
         }
         let Some(target) = args.get(2) else {
@@ -210,7 +250,7 @@ fn main() {
         };
         let commands = &args[3..];
         let attempts_allowed = config.max_attempts.max(1);
-        if !authenticate(&user, attempts_allowed) {
+        if !authenticate(&user, &full_command, attempts_allowed, &config.log_path) {
             exit(1);
         }
         if let Err(e) = list::edit_user(&user_lists_path, target, commands) {
@@ -220,7 +260,7 @@ fn main() {
         exit(0);
     }
     if args[1] == "--made" || args[1] == "-m" {
-        if !require_root(&user) {
+        if !require_root(&user, &full_command, &config.log_path) {
             exit(1);
         }
         let Some(target) = args.get(2) else {
@@ -228,7 +268,7 @@ fn main() {
             exit(1);
         };
         let attempts_allowed = config.max_attempts.max(1);
-        if !authenticate(&user, attempts_allowed) {
+        if !authenticate(&user, &full_command, attempts_allowed, &config.log_path) {
             exit(1);
         }
         if let Err(e) = account::create_account(target) {
@@ -243,7 +283,7 @@ fn main() {
         exit(0);
     }
     if args[1] == "--reset-pass" || args[1] == "-rp" {
-        if !require_root(&user) {
+        if !require_root(&user, &full_command, &config.log_path) {
             exit(1);
         }
         let Some(target) = args.get(2) else {
@@ -251,7 +291,7 @@ fn main() {
             exit(1);
         };
         let attempts_allowed = config.max_attempts.max(1);
-        if !authenticate(&user, attempts_allowed) {
+        if !authenticate(&user, &full_command, attempts_allowed, &config.log_path) {
             exit(1);
         }
         if let Err(e) = account::reset_password(target) {
@@ -261,7 +301,7 @@ fn main() {
         exit(0);
     }
     if args[1] == "--remove-user" || args[1] == "-ru" {
-        if !require_root(&user) {
+        if !require_root(&user, &full_command, &config.log_path) {
             exit(1);
         }
         let Some(target) = args.get(2) else {
@@ -269,7 +309,7 @@ fn main() {
             exit(1);
         };
         let attempts_allowed = config.max_attempts.max(1);
-        if !authenticate(&user, attempts_allowed) {
+        if !authenticate(&user, &full_command, attempts_allowed, &config.log_path) {
             exit(1);
         }
         if let Err(e) = list::remove_user(&user_lists_path, target) {
@@ -290,7 +330,6 @@ fn main() {
     }
     let command = &args[1];
     let command_args = &args[2..];
-    let full_invocation = args[1..].join(" ");
     if !user_lists.is_permitted(&user, command) {
         ui::error(&format!(
             "{} is not permitted to run {}!",
@@ -300,7 +339,7 @@ fn main() {
             &config.log_path,
             Entry {
                 user: &user,
-                command: &full_invocation,
+                command: &full_command,
                 outcome: Outcome::DeniedNotPermitted,
             },
         );
@@ -310,30 +349,11 @@ fn main() {
     let already_authenticated = !config.require_password || has_recent_auth(&user, config.timeout);
     if !already_authenticated {
         let attempts_allowed = config.max_attempts.max(1);
-        if !authenticate(&user, attempts_allowed) {
-            log::record(
-                &config.log_path,
-                Entry {
-                    user: &user,
-                    command: &full_invocation,
-                    outcome: Outcome::DeniedBadPassword {
-                        attempts: attempts_allowed,
-                    },
-                },
-            );
-            ui::error("This incident has been logged!");
+        if !authenticate(&user, &full_command, attempts_allowed, &config.log_path) {
             exit(1);
         }
         touch_auth_timestamp(&user);
     }
-    log::record(
-        &config.log_path,
-        Entry {
-            user: &user,
-            command: &full_invocation,
-            outcome: Outcome::Allowed,
-        },
-    );
     if let Err(e) = exec::run_as_root(command, command_args) {
         ui::error(&format!("{}", e));
         exit(1);

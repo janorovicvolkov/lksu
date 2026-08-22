@@ -17,7 +17,7 @@
 -- --------------------------------------------------------------------------
 
 return {
-    log_path = "/var/log/lksu.log",
+    log_path = "/var/log/lksu",
     timeout = 300,
     max_attempts = 3,
     require_password = true,

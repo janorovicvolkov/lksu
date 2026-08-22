@@ -9,8 +9,8 @@ depends=('pam' 'glibc')
 makedepends=('rustup' 'clang')
 backup=(
     'etc/lksu.d/config.lua'
-    'etc/lksu.d/user-lists.lua'
     'etc/pam.d/lksu'
+    'var/db/lksu/lksuers.db'
 )
 options=('!lto')
 
@@ -37,7 +37,15 @@ package() {
     install -Dm644 etc/pam.d/lksu "$pkgdir/etc/pam.d/lksu"
     # Config, shipped with safe working defaults so the package is
     # usable immediately after install (root is permitted, everyone
-    # else is denied until an admin edits user-lists.lua).
+    # else is denied until an admin adds them with lksu --add-user).
     install -Dm640 -o root -g root etc/lksu.d/config.lua "$pkgdir/etc/lksu.d/config.lua"
-    install -Dm640 -o root -g root log/lksu.log "$pkgdir/var/log/lksu.log"
+    # Permitted-users list (sqlite), seeded with root => ALL so lksu is
+    # usable out of the box. Gets rewritten in place by
+    # --add-user / --edit-user / --remove-user, so pacman will likely flag
+    # it as locally modified after first use, that's expected, same
+    # as any other stateful database pacman happens to track.
+    install -Dm640 -o root -g root var/db/lksu/lksuers.db "$pkgdir/var/db/lksu/lksuers.db"
+    # Per-user log directory (/var/log/lksu/<user>) created empty,
+    # lksu populates files under it as commands are run.
+    install -dm750 -o root -g root "$pkgdir/var/log/lksu"
 }
