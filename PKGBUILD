@@ -39,9 +39,9 @@ package() {
     # usable immediately after install (root is permitted, everyone
     # else is denied until an admin adds them with lksu --add-user).
     install -Dm640 etc/lksu.d/config.lua "$pkgdir/etc/lksu.d/config.lua"
-    chmod 0440 "$pkgdir/etc/lksu.d"
+    chmod 711 "$pkgdir/etc/lksu.d"
     chown root:root "$pkgdir/etc/lksu.d"
-    chmod 0440 "$pkgdir/etc/lksu.d/config.lua"
+    chmod 711 "$pkgdir/etc/lksu.d/config.lua"
     chown root:root "$pkgdir/etc/lksu.d/config.lua"
     # Permitted-users list (sqlite), seeded with root => ALL so lksu is
     # usable out of the box. Gets rewritten in place by
@@ -49,13 +49,13 @@ package() {
     # it as locally modified after first use, that's expected, same
     # as any other stateful database pacman happens to track.
     install -Dm640 var/db/lksu/lksuers.db "$pkgdir/var/db/lksu/lksuers.db"
-    chmod 0440 "$pkgdir/var/db/lksu"
+    chmod 711 "$pkgdir/var/db/lksu"
     chown root:root "$pkgdir/var/db/lksu"
-    chmod 0440 "$pkgdir/var/db/lksu/lksuers.db"
+    chmod 711 "$pkgdir/var/db/lksu/lksuers.db"
     chown root:root "$pkgdir/var/db/lksu/lksuers.db"
     # Per-user log directory (/var/log/lksu/<user>) created empty,
     # lksu populates files under it as commands are run.
     mkdir -p "$pkgdir/var/log/lksu"
-    chmod 0440 "$pkgdir/var/log/lksu"
+    chmod 711 "$pkgdir/var/log/lksu"
     chown root:root "$pkgdir/var/log/lksu"
 }
