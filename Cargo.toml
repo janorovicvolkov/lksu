@@ -1,0 +1,19 @@
+[package]
+name = "lksu"
+version = "1.0.0"
+edition = "2024"
+
+[[bin]]
+name = "lksu"
+path = "src/bin/lksu.rs"
+
+[dependencies]
+colored = "3.1.1"
+mlua = { version = "0.12.0", features = ["lua54", "vendored", "serialize"] }
+serde = { version = "1.0", features = ["derive"] }
+pam = "0.8.0"
+nix = { version = "0.31.3", features = ["user", "process"] }
+chrono = "0.4"
+anyhow = "1.0"
+rpassword = "7.5.4"
+users = "0.11.0"
