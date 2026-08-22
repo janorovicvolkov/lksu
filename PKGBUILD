@@ -1,4 +1,3 @@
-# Maintainer: Your Name <you@example.com>
 pkgname=lksu
 pkgver=1.0.0
 pkgrel=1
