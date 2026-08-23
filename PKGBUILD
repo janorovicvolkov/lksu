@@ -38,8 +38,8 @@ package() {
     # Config, shipped with safe working defaults so the package is
     # usable immediately after install (root is permitted, everyone
     # else is denied until an admin adds them with lksu --add-user).
-    install -Dm 700 etc/lksu.d/config.lua "$pkgdir/etc/lksu.d/config.lua"
-    chmod 700 "$pkgdir/etc/lksu.d/config.lua"
+    install -Dm 600 etc/lksu.d/config.lua "$pkgdir/etc/lksu.d/config.lua"
+    chmod 600 "$pkgdir/etc/lksu.d/config.lua"
     chown root:root "$pkgdir/etc/lksu.d/config.lua"
     chmod 700 "$pkgdir/etc/lksu.d"
     chown root:root "$pkgdir/etc/lksu.d"
@@ -48,8 +48,8 @@ package() {
     # --add-user / --edit-user / --remove-user, so pacman will likely flag
     # it as locally modified after first use, that's expected, same
     # as any other stateful database pacman happens to track.
-    install -Dm 700 var/db/lksu/lksuers.db "$pkgdir/var/db/lksu/lksuers.db"
-    chmod 700 "$pkgdir/var/db/lksu/lksuers.db"
+    install -Dm 600 var/db/lksu/lksuers.db "$pkgdir/var/db/lksu/lksuers.db"
+    chmod 600 "$pkgdir/var/db/lksu/lksuers.db"
     chown root:root "$pkgdir/var/db/lksu/lksuers.db"
     chmod 700 "$pkgdir/var/db/lksu"
     chown root:root "$pkgdir/var/db/lksu"
