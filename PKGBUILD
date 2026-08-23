@@ -41,6 +41,8 @@ package() {
     install -Dm 700 etc/lksu.d/config.lua "$pkgdir/etc/lksu.d/config.lua"
     chmod 700 "$pkgdir/etc/lksu.d/config.lua"
     chown root:root "$pkgdir/etc/lksu.d/config.lua"
+    chmod 700 "$pkgdir/etc/lksu.d"
+    chown root:root "$pkgdir/etc/lksu.d"
     # Permitted-users list (sqlite), seeded with root => ALL so lksu is
     # usable out of the box. Gets rewritten in place by
     # --add-user / --edit-user / --remove-user, so pacman will likely flag
@@ -49,12 +51,14 @@ package() {
     install -Dm 700 var/db/lksu/lksuers.db "$pkgdir/var/db/lksu/lksuers.db"
     chmod 700 "$pkgdir/var/db/lksu/lksuers.db"
     chown root:root "$pkgdir/var/db/lksu/lksuers.db"
+    chmod 700 "$pkgdir/var/db/lksu"
+    chown root:root "$pkgdir/var/db/lksu"
     # Per-user log directory (/var/log/lksu/<user>) created empty,
     # lksu populates files under it as commands are run.
     install -dm 700 "$pkgdir/var/log/lksu"
     chmod 700 "$pkgdir/var/log/lksu"
     chown root:root "$pkgdir/var/log/lksu"
-    install -dm 700 "$pkgdir/run/lkpm"
-    chmod 700 "$pkgdir/run/lkpm"
-    chown root:root "$pkgdir/run/lkpm"
+    install -dm 700 "$pkgdir/run/lksu"
+    chmod 700 "$pkgdir/run/lksu"
+    chown root:root "$pkgdir/run/lksu"
 }
