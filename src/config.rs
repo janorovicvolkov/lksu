@@ -6,11 +6,11 @@ use mlua::{Lua, LuaSerdeExt};
 use serde::{Deserialize, Serialize};
 pub const DEFAULT_CONFIG_PATH: &str = "/etc/lksu.d/config.lua";
 pub const DEFAULT_USER_LISTS_PATH: &str = "/var/db/lksu/lksuers.db";
+pub const DEFAULT_LOG_PATH: &str = "/var/log/lksu";
 
 #[derive(Debug, Clone, Serialize, Deserialize)]
 #[serde(default)]
 pub struct Config {
-    pub log_path: String,
     pub timeout: u64,
     pub max_attempts: u32,
     pub require_password: bool,
@@ -19,7 +19,6 @@ pub struct Config {
 impl Default for Config {
     fn default() -> Self {
         Config {
-            log_path: "/var/log/lksu".to_string(),
             timeout: 300,
             max_attempts: 3,
             require_password: true,
@@ -43,9 +42,6 @@ impl Config {
         let mut cfg: Config = lua
             .from_value(value)
             .map_err(|e| anyhow!("config at {} does not match expected schema: {}", path, e))?;
-        if cfg.log_path.trim().is_empty() {
-            cfg.log_path = Config::default().log_path;
-        }
         if cfg.max_attempts == 0 {
             cfg.max_attempts = Config::default().max_attempts;
         }
@@ -83,10 +79,6 @@ impl UserLists {
     // A row with command = "ALL" grants Permission::All for that user,
     // same sentinel value the old Lua format used.
     pub fn load(path: &str) -> Result<UserLists> {
-        if let Some(parent) = Path::new(path).parent() {
-            fs::create_dir_all(parent)
-                .with_context(|| format!("failed to create {}", parent.display()))?;
-        }
         let conn = rusqlite::Connection::open(path)
             .with_context(|| format!("failed to open sqlite db at {}", path))?;
         conn.execute(

@@ -4,9 +4,9 @@ use std::path::PathBuf;
 use std::process::exit;
 use std::time::SystemTime;
 use colored::*;
-use lksu::config::{Config, Permission, UserLists, DEFAULT_CONFIG_PATH, DEFAULT_USER_LISTS_PATH};
+use lksu::config::{Config, Permission, UserLists, DEFAULT_CONFIG_PATH, DEFAULT_USER_LISTS_PATH, DEFAULT_LOG_PATH};
 use lksu::log::{self, Entry, Outcome};
-use lksu::{account, exec, list, password, ui};
+use lksu::{account, exec, list, password, security, ui};
 
 fn current_username() -> String {
     users::get_current_username()
@@ -14,9 +14,6 @@ fn current_username() -> String {
         .unwrap_or_else(|| "unknown".to_string())
 }
 
-// Path used to cache "this user recently authenticated successfully",
-// so lksu doesn't re-prompt for a password on every single invocation
-// within "config.timeout".
 fn timestamp_path(user: &str) -> PathBuf {
     PathBuf::from(format!("/run/lksu/{}", user))
 }
@@ -40,23 +37,15 @@ fn has_recent_auth(user: &str, timeout_secs: u64) -> bool {
 
 fn touch_auth_timestamp(user: &str) {
     let path = timestamp_path(user);
-    if let Some(parent) = path.parent() {
-        let _ = fs::create_dir_all(parent);
+    if let Some(parent) = std::path::Path::new(&path).parent() {
+        let _ = security::ensure_dir_0700(parent);
     }
     let _ = fs::write(&path, b"");
 }
 
-// Ask for the root password up to "max_attempts" times, verifying each
-// one with PAM. Returns true if authentication succeeded.
 fn authenticate(user: &str, command: &str, max_attempts: u32, log_path: &str) -> bool {
-    println!("");
-    println!(
-        "    {}",
-        "WARNING: Unauthorized access is prohibited! You must type the root password before performing superuser action!".bright_yellow()
-    );
-    println!("");
     for attempt in 1..=max_attempts {
-        println!("{}", "Root password:".bright_cyan());
+        ui::auth_info(&format!("Password for {}:", user.bright_cyan()));
         let rp_config = rpassword::ConfigBuilder::new()
             .password_feedback_mask('*')
             .build();
@@ -84,7 +73,7 @@ fn authenticate(user: &str, command: &str, max_attempts: u32, log_path: &str) ->
             }
             Ok(false) => {
                 if attempt < max_attempts {
-                    ui::warning(&format!(
+                    ui::auth_warn(&format!(
                         "Looks like the password is wrong. Try again! [ {}/{} attempts ]",
                         attempt, max_attempts
                     ));
@@ -97,9 +86,9 @@ fn authenticate(user: &str, command: &str, max_attempts: u32, log_path: &str) ->
         }
     }
     if max_attempts == 1 {
-        ui::error("1 incorrect password attempt detected!");
+        ui::auth_warn("1 incorrect password attempt detected!");
     } else {
-        ui::error(&format!(
+        ui::auth_warn(&format!(
             "{} incorrect password attempts detected!",
             max_attempts
         ));
@@ -118,14 +107,8 @@ fn authenticate(user: &str, command: &str, max_attempts: u32, log_path: &str) ->
     false
 }
 
-// Account-management commands (--add-user, --made, --delete, ...)
-// change who can use lksu or what real system accounts exist, so they
-// require the invoking user to actually be root. Matching the check
-// --reset-pass already had. Without this, any user who can supply
-// their own password could grant themselves ALL permissions via
-// --add-user, which would defeat the whole permitted-list mechanism.
 fn require_root(user: &str, command: &str, log_path: &str) -> bool {
-    if user == "root" {
+    if unsafe { libc::getuid() } == 0 {
         true
     } else {
         ui::error("You are not permitted to run account management commands!");
@@ -144,11 +127,11 @@ fn require_root(user: &str, command: &str, log_path: &str) -> bool {
 
 fn print_permitted(user: &str, lists: &UserLists) {
     match lists.permissions_for(user) {
-        Some(Permission::All) => ui::info("You are permitted to run: ALL commands."),
+        Some(Permission::All) => ui::info(&format!("You are permitted to run: {}.", "ALL commands".bright_green())),
         Some(Permission::Commands(cmds)) => {
             ui::info("You are permitted to run:");
             for c in cmds {
-                println!("  > {}", c);
+                println!("  > {}", c.bright_green());
             }
         }
         None => ui::info("You are not permitted to run any commands!"),
@@ -161,10 +144,26 @@ fn main() {
         ui::print_help();
         exit(0);
     }
-    let config_path = env::var("LKSU_CONFIG").unwrap_or_else(|_| DEFAULT_CONFIG_PATH.to_string());
+    let config_path = DEFAULT_CONFIG_PATH.to_string();
+    let user_lists_path = DEFAULT_USER_LISTS_PATH.to_string();
+    let log_path = DEFAULT_LOG_PATH.to_string();
+    let config_dir = PathBuf::from("/etc/lksu.d");
+    let user_lists_dir = PathBuf::from("/var/db/lksu");
+    let auth_cache_dir = PathBuf::from("/run/lksu");
+    if let Some(parent) = std::path::Path::new(&config_dir).parent() {
+        let _ = security::ensure_dir_0700(parent);
+    }
+    if let Some(parent) = std::path::Path::new(&user_lists_dir).parent() {
+        let _ = security::ensure_dir_0700(parent);
+    }
+    if let Some(parent) = std::path::Path::new(&log_path).parent() {
+        let _ = security::ensure_dir_0700(parent);
+    }
+    if let Some(parent) = std::path::Path::new(&auth_cache_dir).parent() {
+        let _ = security::ensure_dir_0700(parent);
+    }
     let full_command = args[1..].join(" ");
-    let user_lists_path =
-        env::var("LKSU_USER_LISTS").unwrap_or_else(|_| DEFAULT_USER_LISTS_PATH.to_string());
+    let lksu_command = &format!("lksu {}", full_command);
     let config = match Config::load(&config_path) {
         Ok(c) => c,
         Err(e) => {
@@ -172,6 +171,7 @@ fn main() {
             exit(1);
         }
     };
+    let _ = security::ensure_file_0600(&config_path);
     let user_lists = match UserLists::load(&user_lists_path) {
         Ok(l) => l,
         Err(e) => {
@@ -179,9 +179,15 @@ fn main() {
             exit(1);
         }
     };
+    let _ = security::ensure_file_0600(&user_lists_path);
     let user = current_username();
+    if args[1] == "useradd" || args[1] == "userdel" || args[1] == "chpasswd" {
+        if !require_root(&user, &full_command, &log_path) {
+            exit(1);
+        }
+    }
     if args[1] == "--add-user" || args[1] == "-au" {
-        if !require_root(&user, &full_command, &config.log_path) {
+        if !require_root(&user, &lksu_command, &log_path) {
             exit(1);
         }
         let Some(target) = args.get(2) else {
@@ -190,7 +196,7 @@ fn main() {
         };
         let commands = &args[3..];
         let attempts_allowed = config.max_attempts.max(1);
-        if !authenticate(&user, &full_command, attempts_allowed, &config.log_path) {
+        if !authenticate(&user, &lksu_command, attempts_allowed, &log_path) {
             exit(1);
         }
         if let Err(e) = list::add_user(&user_lists_path, target, commands) {
@@ -200,16 +206,14 @@ fn main() {
         exit(0);
     }
     if args[1] == "--command-list" || args[1] == "-cl" {
-        // Root may check any user's permitted commands, everyone else
-        // may only check their own.
         let target = match args.get(2) {
-            Some(t) if t != &user && user != "root" => {
+            Some(t) if t != &user && unsafe { libc::getuid() } != 0 => {
                 ui::error("You are not permitted to check another users permitted commands!");
                 log::record(
-                    &config.log_path,
+                    &log_path,
                     Entry {
                         user: &user,
-                        command: &full_command,
+                        command: &lksu_command,
                         outcome: Outcome::DeniedNotPermitted,
                     },
                 );
@@ -223,7 +227,7 @@ fn main() {
         exit(0);
     }
     if args[1] == "--delete" || args[1] == "-d" {
-        if !require_root(&user, &full_command, &config.log_path) {
+        if !require_root(&user, &lksu_command, &log_path) {
             exit(1);
         }
         let Some(target) = args.get(2) else {
@@ -231,7 +235,7 @@ fn main() {
             exit(1);
         };
         let attempts_allowed = config.max_attempts.max(1);
-        if !authenticate(&user, &full_command, attempts_allowed, &config.log_path) {
+        if !authenticate(&user, &lksu_command, attempts_allowed, &log_path) {
             exit(1);
         }
         if let Err(e) = account::delete_account(target) {
@@ -241,7 +245,7 @@ fn main() {
         exit(0);
     }
     if args[1] == "--edit-user" || args[1] == "-eu" {
-        if !require_root(&user, &full_command, &config.log_path) {
+        if !require_root(&user, &lksu_command, &log_path) {
             exit(1);
         }
         let Some(target) = args.get(2) else {
@@ -250,7 +254,7 @@ fn main() {
         };
         let commands = &args[3..];
         let attempts_allowed = config.max_attempts.max(1);
-        if !authenticate(&user, &full_command, attempts_allowed, &config.log_path) {
+        if !authenticate(&user, &lksu_command, attempts_allowed, &log_path) {
             exit(1);
         }
         if let Err(e) = list::edit_user(&user_lists_path, target, commands) {
@@ -260,7 +264,7 @@ fn main() {
         exit(0);
     }
     if args[1] == "--made" || args[1] == "-m" {
-        if !require_root(&user, &full_command, &config.log_path) {
+        if !require_root(&user, &lksu_command, &log_path) {
             exit(1);
         }
         let Some(target) = args.get(2) else {
@@ -268,7 +272,7 @@ fn main() {
             exit(1);
         };
         let attempts_allowed = config.max_attempts.max(1);
-        if !authenticate(&user, &full_command, attempts_allowed, &config.log_path) {
+        if !authenticate(&user, &lksu_command, attempts_allowed, &log_path) {
             exit(1);
         }
         if let Err(e) = account::create_account(target) {
@@ -283,7 +287,7 @@ fn main() {
         exit(0);
     }
     if args[1] == "--reset-pass" || args[1] == "-rp" {
-        if !require_root(&user, &full_command, &config.log_path) {
+        if !require_root(&user, &lksu_command, &log_path) {
             exit(1);
         }
         let Some(target) = args.get(2) else {
@@ -291,7 +295,7 @@ fn main() {
             exit(1);
         };
         let attempts_allowed = config.max_attempts.max(1);
-        if !authenticate(&user, &full_command, attempts_allowed, &config.log_path) {
+        if !authenticate(&user, &lksu_command, attempts_allowed, &log_path) {
             exit(1);
         }
         if let Err(e) = account::reset_password(target) {
@@ -301,7 +305,7 @@ fn main() {
         exit(0);
     }
     if args[1] == "--remove-user" || args[1] == "-ru" {
-        if !require_root(&user, &full_command, &config.log_path) {
+        if !require_root(&user, &lksu_command, &log_path) {
             exit(1);
         }
         let Some(target) = args.get(2) else {
@@ -309,7 +313,7 @@ fn main() {
             exit(1);
         };
         let attempts_allowed = config.max_attempts.max(1);
-        if !authenticate(&user, &full_command, attempts_allowed, &config.log_path) {
+        if !authenticate(&user, &lksu_command, attempts_allowed, &log_path) {
             exit(1);
         }
         if let Err(e) = list::remove_user(&user_lists_path, target) {
@@ -336,7 +340,7 @@ fn main() {
             user, command
         ));
         log::record(
-            &config.log_path,
+            &log_path,
             Entry {
                 user: &user,
                 command: &full_command,
@@ -349,7 +353,7 @@ fn main() {
     let already_authenticated = !config.require_password || has_recent_auth(&user, config.timeout);
     if !already_authenticated {
         let attempts_allowed = config.max_attempts.max(1);
-        if !authenticate(&user, &full_command, attempts_allowed, &config.log_path) {
+        if !authenticate(&user, &full_command, attempts_allowed, &log_path) {
             exit(1);
         }
         touch_auth_timestamp(&user);

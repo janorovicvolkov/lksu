@@ -1,8 +1,5 @@
 use colored::*;
 
-// Print a warning line, e.g. "ui::warning("nothing ever happens")".
-// For formatted messages, build the string with "format!" first:
-// "ui::warning(&format!("attempt {}/3", n))".
 pub fn info(msg: &str) {
     println!("{} {}", "[i]".bright_cyan(), msg);
 }
@@ -21,6 +18,14 @@ pub fn success(msg: &str) {
 
 pub fn password_prompt_label() -> String {
     "> ".bright_cyan().to_string()
+}
+
+pub fn auth_info(msg: &str) {
+    println!("{} {}", "[ AUTH ]".bright_cyan(), msg.bright_cyan());
+}
+
+pub fn auth_warn(msg: &str) {
+    eprintln!("{} {}", "[ AUTH ]".bright_yellow(), msg.bright_yellow());
 }
 
 pub fn print_help() {

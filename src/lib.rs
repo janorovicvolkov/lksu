@@ -4,4 +4,5 @@ pub mod exec;
 pub mod list;
 pub mod log;
 pub mod password;
+pub mod security;
 pub mod ui;
