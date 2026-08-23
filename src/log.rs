@@ -1,5 +1,4 @@
 use std::fs::OpenOptions;
-use std::fs;
 use std::io::Write;
 use std::path::Path;
 use anyhow::{Context, Result};
@@ -68,6 +67,6 @@ fn try_record(log_dir: &str, entry: Entry) -> Result<()> {
     );
     file.write_all(line.as_bytes())
         .context("failed to write log entry")?;
-    let _ = security::ensure_file_0600(&file);
+    let _ = security::ensure_file_0600(&path);
     Ok(())
 }
