@@ -17,7 +17,7 @@ pub fn success(msg: &str) {
 }
 
 pub fn password_prompt_label() -> String {
-    "> ".bright_cyan().to_string()
+    "‣ ".bright_cyan().to_string()
 }
 
 pub fn auth_info(msg: &str) {
@@ -34,14 +34,14 @@ pub fn print_help() {
     println!("::: [ Liska Superuser (1.0.0) ] :::");
     println!("-----------------------------------");
     println!("");
-    println!("Usage: lksu [command] <args>");
-    println!("> -a  | --add                  add a user to lksu permitted lists");
-    println!("> -e  | --edit                 edit a user permissions on lksu permitted lists");
-    println!("> -r  | --remove               remove a user from lksu permitted lists");
-    println!("> -cl | --command-list         list commands you are permitted to run");
-    println!("> -rc | --reset-cache          clear any cached authentication timestamp");
-    println!("> -ul | --user-list            list all users from lksu permitted lists with their uid");
-    println!("> /etc/lksu.d/config.lua       lksu behaviour configuration");
-    println!("> /var/db/lksu/lksuers.db      lksu permitted users list (edit directly, as root)");
+    println!("Usage: lksu <options> [command] <args>");
+    println!("> -a  | --add                 add a user to lksu permitted lists");
+    println!("> -e  | --edit                edit a user permissions on lksu permitted lists");
+    println!("> -r  | --remove              remove a user from lksu permitted lists");
+    println!("> -cl | --command-list        list commands you are permitted to run");
+    println!("> -rc | --reset-cache         clear any cached authentication timestamp");
+    println!("> -ul | --user-list           list all users from lksu permitted lists with their uid");
+    println!("> /etc/lksu.d/config.lua      lksu behaviour configuration");
+    println!("> /var/db/lksu/lksuers.db     lksu permitted users list (edit directly, as root)");
     println!("");
 }
