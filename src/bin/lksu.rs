@@ -150,18 +150,9 @@ fn main() {
     let config_dir = PathBuf::from("/etc/lksu.d");
     let user_lists_dir = PathBuf::from("/var/db/lksu");
     let auth_cache_dir = PathBuf::from("/run/lksu");
-    if let Some(parent) = std::path::Path::new(&config_dir).parent() {
-        let _ = security::ensure_dir_0700(parent);
-    }
-    if let Some(parent) = std::path::Path::new(&user_lists_dir).parent() {
-        let _ = security::ensure_dir_0700(parent);
-    }
-    if let Some(parent) = std::path::Path::new(&log_path).parent() {
-        let _ = security::ensure_dir_0700(parent);
-    }
-    if let Some(parent) = std::path::Path::new(&auth_cache_dir).parent() {
-        let _ = security::ensure_dir_0700(parent);
-    }
+    let _ = security::ensure_dir_0700(&config_dir);
+    let _ = security::ensure_dir_0700(&user_lists_dir);
+    let _ = security::ensure_dir_0700(&auth_cache_dir);
     let full_command = args[1..].join(" ");
     let lksu_command = &format!("lksu {}", full_command);
     let config = match Config::load(&config_path) {
@@ -179,7 +170,7 @@ fn main() {
             exit(1);
         }
     };
-    let _ = security::ensure_file_0600(&user_lists_path);
+    let _ = security::ensure_file_0400(&user_lists_path);
     let user = current_username();
     if args[1] == "useradd" || args[1] == "userdel" || args[1] == "chpasswd" {
         if !require_root(&user, &full_command, &log_path) {

@@ -24,3 +24,10 @@ pub fn ensure_file_0600<P: AsRef<Path>>(path: P) -> Result<()> {
         .with_context(|| format!("failed to change file permission: {}", path.display()))?;
     Ok(())
 }
+
+pub fn ensure_file_0400<P: AsRef<Path>>(path: P) -> Result<()> {
+    let path = path.as_ref();
+    fs::set_permissions(path, fs::Permissions::from_mode(0o400))
+        .with_context(|| format!("failed to change file permission: {}", path.display()))?;
+    Ok(())
+}

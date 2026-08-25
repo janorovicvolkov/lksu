@@ -31,7 +31,7 @@ package() {
     # Binary, installed setuid-root: lksu needs to already be running
     # as root (via this bit) before it can setuid(0)/setgid(0) itself
     # to hand off to the target command, see src/exec.rs.
-    install -Dm 755 target/release/lksu "$pkgdir/usr/bin/lksu"
+    install -Dm 4755 target/release/lksu "$pkgdir/usr/bin/lksu"
     chmod 4755 "$pkgdir/usr/bin/lksu"
     chown root:root "$pkgdir/usr/bin/lksu"
     install -Dm 644 etc/pam.d/lksu "$pkgdir/etc/pam.d/lksu"
@@ -48,8 +48,8 @@ package() {
     # --add-user / --edit-user / --remove-user, so pacman will likely flag
     # it as locally modified after first use, that's expected, same
     # as any other stateful database pacman happens to track.
-    install -Dm 600 var/db/lksu/lksuers.db "$pkgdir/var/db/lksu/lksuers.db"
-    chmod 600 "$pkgdir/var/db/lksu/lksuers.db"
+    install -Dm 400 var/db/lksu/lksuers.db "$pkgdir/var/db/lksu/lksuers.db"
+    chmod 400 "$pkgdir/var/db/lksu/lksuers.db"
     chown root:root "$pkgdir/var/db/lksu/lksuers.db"
     chmod 700 "$pkgdir/var/db/lksu"
     chown root:root "$pkgdir/var/db/lksu"
