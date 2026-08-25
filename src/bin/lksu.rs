@@ -48,7 +48,7 @@ fn authenticate(user: &str, command: &str, max_attempts: u32, log_path: &str) ->
     for attempt in 1..=max_attempts {
         ui::auth_info(&format!("Password for {}:", user.bright_cyan()));
         let rp_config = rpassword::ConfigBuilder::new()
-            .password_feedback_mask('*')
+            .password_feedback_mask('•')
             .build();
         let pass = match rpassword::prompt_password_with_config(
             ui::password_prompt_label(),
