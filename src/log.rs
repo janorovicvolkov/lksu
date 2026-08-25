@@ -59,7 +59,7 @@ fn try_record(log_dir: &str, entry: Entry) -> Result<()> {
         .open(&path)
         .with_context(|| format!("failed to open log file at {}", path.display()))?;
     let line = format!(
-        "::: [ {} ] :::\n> user: {}\n> command: \"{}\"\n> result: {}\n\n",
+        "::: [ {} ] :::\n‣ Username: {}\n‣ Command: \"{}\"\n‣ Result: {}\n\n",
         Local::now().format("%d-%m-%Y %H:%M:%S %z"),
         entry.user,
         entry.command,
