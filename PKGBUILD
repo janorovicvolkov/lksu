@@ -28,26 +28,23 @@ check() {
 }
 
 package() {
-    # Binary, installed setuid-root: lksu needs to already be running
-    # as root (via this bit) before it can setuid(0)/setgid(0) itself
-    # to hand off to the target command, see src/exec.rs.
     install -Dm 4755 target/release/lksu "$pkgdir/usr/bin/lksu"
     chmod 4755 "$pkgdir/usr/bin/lksu"
     chown root:root "$pkgdir/usr/bin/lksu"
     install -Dm 644 etc/pam.d/lksu "$pkgdir/etc/pam.d/lksu"
     # Config, shipped with safe working defaults so the package is
     # usable immediately after install (root is permitted, everyone
-    # else is denied until an admin adds them with lksu --add-user).
+    # else is denied until an admin adds them directly to the
+    # permissions db below).
     install -Dm 600 etc/lksu.d/config.lua "$pkgdir/etc/lksu.d/config.lua"
     chmod 600 "$pkgdir/etc/lksu.d/config.lua"
     chown root:root "$pkgdir/etc/lksu.d/config.lua"
     chmod 700 "$pkgdir/etc/lksu.d"
     chown root:root "$pkgdir/etc/lksu.d"
     # Permitted-users list (sqlite), seeded with root => ALL so lksu is
-    # usable out of the box. Gets rewritten in place by
-    # --add-user / --edit-user / --remove-user, so pacman will likely flag
-    # it as locally modified after first use, that's expected, same
-    # as any other stateful database pacman happens to track.
+    # usable out of the box. Managed directly by an admin with lksu
+    # --add | --edit | --remove the same way /etc/sudoers is edited with 
+    # visudo.
     install -Dm 400 var/db/lksu/lksuers.db "$pkgdir/var/db/lksu/lksuers.db"
     chmod 400 "$pkgdir/var/db/lksu/lksuers.db"
     chown root:root "$pkgdir/var/db/lksu/lksuers.db"

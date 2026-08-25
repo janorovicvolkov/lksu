@@ -70,14 +70,6 @@ pub struct UserLists {
 }
 
 impl UserLists {
-    // Permitted-user list now backed by sqlite at DEFAULT_USER_LISTS_PATH
-    // (/var/db/lksu/lksuers.db) instead of user-lists.lua. Table schema
-    // (also created by list.rs own open_db, which is what actually
-    // writes rows via --add-user/--edit-user/--remove-user):
-    //   CREATE TABLE permissions (username TEXT, command TEXT,
-    //                              PRIMARY KEY (username, command))
-    // A row with command = "ALL" grants Permission::All for that user,
-    // same sentinel value the old Lua format used.
     pub fn load(path: &str) -> Result<UserLists> {
         let conn = rusqlite::Connection::open(path)
             .with_context(|| format!("failed to open sqlite db at {}", path))?;

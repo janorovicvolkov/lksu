@@ -34,17 +34,14 @@ pub fn print_help() {
     println!("::: [ Liska Superuser (1.0.0) ] :::");
     println!("-----------------------------------");
     println!("");
-    println!("Usage: lksu <options> [command] <args>");
-    println!("> -au | --add-user             add a user to lksu permitted lists");
-    println!("> -cl | --command-list         list commands a user are permitted to run");
-    println!("> -d  | --delete               delete a user account from the system");
-    println!("> -eu | --edit-user            edit a user permissions on lksu permitted lists");
-    println!("> -m  | --made                 made a user account to the system");
-    println!("> -rc | --reset-cache          forget any cached authentication timestamp");
-    println!("> -rp | --reset-pass           reset a user password (root only)");
-    println!("> -ru | --remove-user          remove a user from lksu permitted lists");
-    println!("> -ul | --user-list            list all users from the system");
-    println!("> /etc/lksu/config.lua         lksu behaviour configuration");
-    println!("> /etc/lksu/user-lists.lua     lksu permitted users configuration");
+    println!("Usage: lksu [command] <args>");
+    println!("> -a  | --add                  add a user to lksu permitted lists");
+    println!("> -e  | --edit                 edit a user permissions on lksu permitted lists");
+    println!("> -r  | --remove               remove a user from lksu permitted lists");
+    println!("> -cl | --command-list         list commands you are permitted to run");
+    println!("> -rc | --reset-cache          clear any cached authentication timestamp");
+    println!("> -ul | --user-list            list all users from lksu permitted lists with their uid");
+    println!("> /etc/lksu.d/config.lua       lksu behaviour configuration");
+    println!("> /var/db/lksu/lksuers.db      lksu permitted users list (edit directly, as root)");
     println!("");
 }
