@@ -42,6 +42,5 @@ pub fn print_help() {
     println!("> -rc | --reset-cache         clear any cached authentication timestamp");
     println!("> -ul | --user-list           list all users from lksu permitted lists with their uid");
     println!("> /etc/lksu.d/config.lua      lksu behaviour configuration");
-    println!("> /var/db/lksu/lksuers.db     lksu permitted users list (edit directly, as root)");
     println!("");
 }
