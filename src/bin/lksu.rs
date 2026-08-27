@@ -198,7 +198,7 @@ fn main() {
             exit(1);
         }
         let Some(target) = args.get(2) else {
-            ui::error("Usage: lksu --edit-user <username> [command|ALL] <more commands....>");
+            ui::error("Usage: lksu --edit <username> [command|ALL] <more commands....>");
             exit(1);
         };
         let commands = &args[3..];
@@ -217,7 +217,7 @@ fn main() {
             exit(1);
         }
         let Some(target) = args.get(2) else {
-            ui::error("Usage: lksu --remove-user <username>");
+            ui::error("Usage: lksu --remove <username>");
             exit(1);
         };
         let attempts_allowed = config.max_attempts.max(1);
