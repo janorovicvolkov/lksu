@@ -17,6 +17,7 @@ options=('!lto')
 prepare() {
     export RUSTUP_TOOLCHAIN=stable
     cargo fetch
+    cargo check --release --all-targets
 }
 
 build() {
