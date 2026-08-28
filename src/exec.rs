@@ -1,6 +1,4 @@
-use std::fs;
 use std::os::unix::process::CommandExt;
-use std::path::Path;
 use std::process::Command;
 use anyhow::{Context, Result};
 use nix::unistd::{setgid, setuid, Gid, Uid};
