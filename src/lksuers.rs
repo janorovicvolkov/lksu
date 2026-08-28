@@ -171,20 +171,20 @@ pub fn print_permitted_users(accounts: &[SystemAccount]) {
     }
     crate::ui::info("All accounts on this system:");
     for account in accounts {
-        let uid_ui = format!("UID: {}", account.uid);
+        let uid_ui = format!("[ UID: {} ]", account.uid);
+        println!("");
         println!(
-            "  • {} [ {} ]",
-            account.username.bright_green(),
+            "• {} {}",
+            account.username.bright_cyan(),
             uid_ui.bright_green()
         );
         if account.command.iter().any(|c| c == "ALL") {
-            println!("    Permitted: {}", "ALL commands".bright_green());
+            println!("  ➔ Permitted: {}", "ALL commands".bright_green());
         } else {
-            print!("    Permitted:");
+            println!("  ➔ Permitted:");
             for command in &account.command {
-                print!("    ‣ {}", command.bright_green());
+                println!("    ‣ {}", command.bright_green());
             }
-            println!();
         }
     }
 }
