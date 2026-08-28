@@ -4,7 +4,7 @@
 --
 -- This file configures behavior rules for lksu.
 --
--- > Param: [ timeout | max_attempts | require_password | blacklist | max_processes ]
+-- > Param: [ timeout | max_attempts | require_password | blacklist ]
 --
 -- > timeout           : The seconds an authentication is cached before lksu asks for the
 --                       password again.
@@ -20,13 +20,6 @@
 --                       distinct invocations like "rm -rf /home", list those separately
 --                       if needed. lksu invoking itself ("lksu ...") is ALWAYS blocked
 --                       unconditionally and doesn't need an entry here.
--- > max_processes     : Process-count cap (cgroup v2 pids.max) applied to every escalated
---                       command, regardless of what it is. This is what stops fork bombs,
---                       since a fork bomb can be written in any language and no fixed list 
---                       of strings could ever cover them all. It works even against root, 
---                       unlike a plain "ulimit -u". Requires cgroup v2 to be mounted, if 
---                       it isn't, lksu warns and runs the command anyway rather than 
---                       refusing to work at all.
 -- --------------------------------------------------------------------------
 
 return {
@@ -39,5 +32,4 @@ return {
         "mkfs /",
         "dd if=/dev/zero of=/dev/sda",
     },
-    max_processes = 256,
 }

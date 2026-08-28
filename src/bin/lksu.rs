@@ -314,7 +314,7 @@ fn main() {
         }
         touch_auth_timestamp(&user);
     }
-    if let Err(e) = exec::run_as_root(command, command_args, config.max_processes) {
+    if let Err(e) = exec::run_as_root(command, command_args) {
         ui::error(&format!("{}", e));
         exit(1);
     }

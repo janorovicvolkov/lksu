@@ -15,7 +15,6 @@ pub struct Config {
     pub max_attempts: u32,
     pub require_password: bool,
     pub blacklist: Vec<String>,
-    pub max_processes: u32,
 }
 
 impl Default for Config {
@@ -25,7 +24,6 @@ impl Default for Config {
             max_attempts: 3,
             require_password: true,
             blacklist: Vec::new(),
-            max_processes: 256,
         }
     }
 }
@@ -95,9 +93,6 @@ impl Config {
             .map_err(|e| anyhow!("config at {} does not match expected schema: {}", path, e))?;
         if cfg.max_attempts == 0 {
             cfg.max_attempts = Config::default().max_attempts;
-        }
-        if cfg.max_processes == 0 {
-            cfg.max_processes = Config::default().max_processes;
         }
         Ok(cfg)
     }
