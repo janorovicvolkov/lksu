@@ -16,6 +16,7 @@ pub struct Entry<'a> {
 pub enum Outcome {
     Allowed,
     DeniedNotPermitted,
+    DeniedBlacklisted,
     DeniedBadPassword { attempts: u32 },
 }
 
@@ -24,6 +25,7 @@ impl Outcome {
         match self {
             Outcome::Allowed => "ALLOWED".to_string(),
             Outcome::DeniedNotPermitted => "DENIED: not in permitted list".to_string(),
+            Outcome::DeniedBlacklisted => "DENIED: matched blacklist rule".to_string(),
             Outcome::DeniedBadPassword { attempts } => {
                 if *attempts == 1 {
                     format!("DENIED: {} incorrect password attempt", attempts)

@@ -14,6 +14,8 @@ pub struct Config {
     pub timeout: u64,
     pub max_attempts: u32,
     pub require_password: bool,
+    pub blacklist: Vec<String>,
+    pub max_processes: u32,
 }
 
 impl Default for Config {
@@ -22,8 +24,57 @@ impl Default for Config {
             timeout: 300,
             max_attempts: 3,
             require_password: true,
+            blacklist: Vec::new(),
+            max_processes: 256,
         }
     }
+}
+
+// Splits a command line into normalized tokens: this is what lets
+// "rm  -rf   /", "rm -r -f /", and "rm --recursive --force /" all be
+// recognized as equivalent to "rm -rf /" below. It is intentionally
+// simple (whitespace split) since lksu commands are not passed through
+// a shell, so there's no quoting or escaping to worry about.
+fn normalize_tokens(s: &str) -> Vec<String> {
+    s.split_whitespace().map(|t| t.to_lowercase()).collect()
+}
+
+// A blacklist entry can either be a single bare token (matches if that
+// token appears anywhere in the command, e.g. "lksu") or a short
+// sequence (matches only as a contiguous, order-sensitive run of
+// tokens). Long-form flags are treated as aliases of their short-form
+// equivalents for the common destructive cases.
+fn expand_aliases(tokens: &[String]) -> Vec<String> {
+    tokens
+        .iter()
+        .flat_map(|t| match t.as_str() {
+            "--recursive" => vec!["-r".to_string()],
+            "--force" => vec!["-f".to_string()],
+            "--no-preserve-root" => vec!["--no-preserve-root".to_string()],
+            // Split combined short flags like "-rf" into "-r" "-f" so
+            // ordering or spacing differences don't matter.
+            t if t.starts_with('-') && !t.starts_with("--") && t.len() > 2 => {
+                t[1..].chars().map(|c| format!("-{}", c)).collect()
+            }
+            other => vec![other.to_string()],
+        })
+        .collect()
+}
+
+pub fn is_blacklisted(full_command: &str, blacklist: &[String]) -> bool {
+    let cmd_tokens = expand_aliases(&normalize_tokens(full_command));
+    blacklist.iter().any(|rule| {
+        let rule_tokens = expand_aliases(&normalize_tokens(rule));
+        if rule_tokens.is_empty() {
+            return false;
+        }
+        // Every token required by the rule must be present in the
+        // command (order-independent), so "rm -rf /" matches "rm -r -f /"
+        // and "rm -f -r /" alike, but "rm -r /home" does not match a
+        // "rm -rf /" rule because "-f" and the exact path "/" are both
+        // still required.
+        rule_tokens.iter().all(|rt| cmd_tokens.contains(rt))
+    })
 }
 
 impl Config {
@@ -44,6 +95,9 @@ impl Config {
             .map_err(|e| anyhow!("config at {} does not match expected schema: {}", path, e))?;
         if cfg.max_attempts == 0 {
             cfg.max_attempts = Config::default().max_attempts;
+        }
+        if cfg.max_processes == 0 {
+            cfg.max_processes = Config::default().max_processes;
         }
         Ok(cfg)
     }

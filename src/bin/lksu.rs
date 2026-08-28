@@ -1,10 +1,10 @@
 use std::env;
 use std::fs;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use std::process::exit;
 use std::time::SystemTime;
 use colored::*;
-use lksu::config::{Config, Permission, UserLists, DEFAULT_CONFIG_PATH, DEFAULT_USER_LISTS_PATH, DEFAULT_LOG_PATH};
+use lksu::config::{self, Config, Permission, UserLists, DEFAULT_CONFIG_PATH, DEFAULT_USER_LISTS_PATH, DEFAULT_LOG_PATH};
 use lksu::log::{self, Entry, Outcome};
 use lksu::{exec, password, security, ui, lksuers};
 
@@ -251,6 +251,45 @@ fn main() {
     }
     let command = &args[1];
     let command_args = &args[2..];
+    // Hardcoded unconditional: never let lksu launch itself, no matter
+    // what the per-user permission list or blacklist config say. Without
+    // this, a user permitted to run "lksu" (or ALL) could chain lksu
+    // invocations to re-run --add or --edit as root and grant themselves
+    // arbitrary permissions, bypassing require_root or authenticate entirely.
+    let looks_like_self = Path::new(command)
+        .file_name()
+        .and_then(|f| f.to_str())
+        .map(|f| f == "lksu")
+        .unwrap_or(false);
+    if looks_like_self {
+        ui::error("WARNING: lksu may not be used to invoke itself!");
+        log::record(
+            &log_path,
+            Entry {
+                user: &user,
+                command: &full_command,
+                outcome: Outcome::DeniedBlacklisted,
+            },
+        );
+        ui::error("This incident has been logged!");
+        exit(1);
+    }
+    if config::is_blacklisted(&full_command, &config.blacklist) {
+        ui::error(&format!(
+            "WARNING: {} is blacklisted and cannot be run!",
+            full_command
+        ));
+        log::record(
+            &log_path,
+            Entry {
+                user: &user,
+                command: &full_command,
+                outcome: Outcome::DeniedBlacklisted,
+            },
+        );
+        ui::error("This incident has been logged!");
+        exit(1);
+    }
     if !user_lists.is_permitted(&user, command) {
         ui::error(&format!(
             "{} is not permitted to run {}!",
@@ -275,7 +314,7 @@ fn main() {
         }
         touch_auth_timestamp(&user);
     }
-    if let Err(e) = exec::run_as_root(command, command_args) {
+    if let Err(e) = exec::run_as_root(command, command_args, config.max_processes) {
         ui::error(&format!("{}", e));
         exit(1);
     }
